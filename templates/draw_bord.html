@@ -1,0 +1,165 @@
+<html lang="zh">
+ <head>
+ <meta charset="utf-8">
+ <title>Drawing bord</title>
+
+ <style type="text/css">
+ *{
+ margin: 0;
+ padding: 0;
+ list-style: none;
+ }
+
+ body{
+ background:#ffffff no-repeat;
+ }
+
+ .wrapper{
+ text-align: center;
+ }
+
+ .wrapper canvas{
+ border: 1px solid blue;
+ border-radius:25px;
+ margin-bottom: 16px;
+ background-color: #fff;
+
+ }
+ .wrapper .btn-list{
+ text-align: center;
+ }
+
+ .wrapper .btn-list li{
+ display: inline-block;
+ margin-left: 40px;
+
+ }
+ .wrapper .btn-list li input{
+ background-color: #0040ff;
+ color: blanchedalmond;
+ border: none;
+ padding: 6px 13px;
+ cursor: pointer;
+ border-radius:25px;
+ font-size: 18px;
+ display: block;
+ transition-duration: 0.2s;
+ }
+
+ </style>
+ </head>
+
+ <body>
+ <!-- div.wrapper>canvas+ul.btn-list>li*5>input -->
+ <div style="text-align: center"><h1>手写识别数字0到9</h1></div>
+
+ <div class="wrapper">
+<form id="uploadForm" enctype="multipart/form-data">
+ <canvas id="img_cavs" class="cavs" width="500" height="500" style="align-content: center"></canvas>
+ <ul class="btn-list">
+ <li><input type="button" id="cleanBoard" value="识别"></li>
+ <li><h2 id="image_value"> 答案 </h2></li>
+ </ul>
+ </form>
+ </div>
+
+
+ </body>
+
+ <script src="jquery-3.4.1.min.js"></script>
+ <script>
+ var CONTEXTPATH = 'http://127.0.0.1:5000'
+
+ var drawingLineObj = {
+ cavs:$('#img_cavs'),
+ context:$('.cavs').get(0).getContext('2d'),
+ cleanBoard:$('#cleanBoard'),
+ bool:false,
+
+ init:function(){
+ this.context.lineCap = 'round'; //线条起始与结尾样式
+ this.context.lineJoin = 'round'; //转弯
+ this.context.lineWidth = 20
+ this.draw(); //画笔函数
+ this.btnFn(); //按钮函数
+ },
+
+ draw:function(){
+ var cavs = this.cavs,
+ self = this;
+ var c_x = cavs.offset().left, //canvas离左边的距离
+ c_y = cavs.offset().top; //canvas离上边的距离
+
+ cavs.mousedown(function(e){
+ e = e||Event;
+ self.bool = true;
+ var m_x = e.pageX - c_x, //鼠标点距离减去canvas离左边的距离等于画布点
+  m_y = e.pageY - c_y; //鼠标点距离减去canvas离上边的距离等于画布点
+ self.context.beginPath();
+  self.context.moveTo(m_x,m_y);//鼠标在画布上的点
+
+ })
+ cavs.mousemove(function(e){
+ if(self.bool){ //定义一把锁，防止鼠标移开滑动
+ self.context.lineTo(e.pageX-c_x,e.pageY-c_y);
+ self.context.stroke(); //绘制出路径
+ }
+
+ })
+ cavs.mouseup(function(){
+  self.context.closePath(); //结束自动闭合
+ self.bool = false; //鼠标不移动时画笔断开
+
+ })
+ cavs.mouseleave(function(){
+ self.context.closePath(); //结束自动闭合
+ self.bool = false; //鼠标不移动时画笔断开
+
+ })
+ },//draw:function()
+
+
+ btnFn:function(){
+ var self = this;
+ //event for click the button
+ $('.btn-list').on('click',function(e){
+
+ // 通过选择器获取canvas元素
+ var canvas = document.querySelector("#img_cavs")
+ // 使用toDataURL方法将图像转换被base64编码的URL字符串
+ var url = canvas.toDataURL('image/png')
+ //image data is in the url use FormData to append to the file
+ var formFile = new FormData();
+ formFile.append("image",url)
+
+ //Asynchronous transfer image to the server and get the response frome server
+ $.ajax({
+       url: CONTEXTPATH,
+       data: formFile,
+       type: "POST",
+       dataType: "json",
+       processData: false,
+       contentType: false,
+       global:true,
+       complete: function (msg)
+       {
+           //set the response text to the html element which is the value of image
+           document.getElementById("image_value").innerHTML=msg.responseText
+       }
+
+   })
+
+
+ //clean the drawing bord
+ self.context.clearRect(0,0,self.cavs[0].width,self.cavs[0].height)
+
+ })
+ }//btnFn:function()
+
+ }//drawingLineObj
+
+
+ drawingLineObj.init();
+
+ </script>
+</html>
